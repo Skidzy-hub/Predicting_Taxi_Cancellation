@@ -1,0 +1,65 @@
+1.	Set “0” to all missing values in the table:
+ 
+	 
+
+Explanation:
+In this step, we cleaned the dataset by replacing all NaN (missing) values with 0. This is useful when preparing the data for analysis or machine learning models that cannot handle missing values.
+2.	Use the following variables as predictors: [‘travel_type_id', 'within_city', 'online_booking', 'mobile_site_booking', 'booking_created_Hour', 'trip_length'], and [‘Car_Cancellation’] as an outcome variable.
+a.	'within_city' is a new binary variable that you will create and assign “1” when ['from_city_id'] == taxi_df['to_city_id']. 
+ 
+In this step, we engineered a new feature called within_city. This variable helps us understand whether a trip occurs within the same city or between different cities, which can influence the likelihood of a taxi being canceled.
+•	from_city_id: The ID of the city where the trip starts
+•	to_city_id: The ID of the city where the trip ends
+If both values are the same, it means the trip is within the same city, so we assign 1. If they are different, it’s a cross-city trip, so we assign 0.
+
+b.	'booking_created_Hour' is derived from the existing variable [‘booking_created’] 
+ 
+We extracted the hour part (from 0 to 23) of the booking_created timestamp to create a new feature, booking_created_Hour. This tells us at what hour of the day the booking was made, which can be useful for identifying time-based patterns in cancellations.
+For example:
+•	Bookings made at night vs. day might have different cancellation rates.
+•	This variable helps improve our model's prediction power.
+c.	'trip_length' is basically the distance calculated from the GPS data; use the following four variables [‘from_lat’, ‘from_long’, ‘to_lat’ ‘to_long’] to derive the distance and name it ‘trip_length’.
+ 
+we successfully calculated the trip length using GPS coordinates (from_lat, from_long, to_lat, to_long) with the geopy.distance.geodesic function. The function extracts the latitude and longitude of the pickup and drop-off locations for each row and computes the real-world distance in kilometers. If any errors occur due to missing or invalid coordinates, the function safely returns 0. The resulting trip_length column provides meaningful insights into trip distances, with values ranging from short trips (~0.82 km) to longer journeys (~32 km). This metric is essential for analyzing cancellation patterns, as shorter trips may be more prone to cancellations than longer ones. The calculated trip distances can now be used as a predictor variable in further analysis, such as modeling taxi cancellation behavior.
+3.	Split the data into two sets; training (60%) and test (40%)
+ 
+We used the train_test_split function to randomly divide the dataset:
+•	60% of the data is used for training the model (X_train, y_train).
+•	40% of the data is reserved for testing the model (X_test, y_test).
+•	The random_state=42 ensures that results are reproducible.
+This split allows us to train a model on one part of the data and then evaluate its performance on unseen data (test set). 
+4.	Apply three ML techniques (Decision Trees, Random Forest, and Neural Net) for this classification problem.
+ 
+ 
+The image above shows the performance of three classification models: Decision Tree, Random Forest, and Neural Network in predicting taxi cancellations. The results include accuracy scores and classification reports. Neural Network achieved the highest accuracy (92.9%), followed by Random Forest (90.3%), and Decision Tree (88.3%), higher accuracy means the model is better at making correct predictions overall. The results from the Decision Tree, Random Forest, and Neural Network models indicate that while all three models achieved high accuracy (88.3%–92.9%), they struggled with predicting cancellations (class 1) due to class imbalance. A key issue here is the low sensitivity (recall) for class 1, which means the models fail to correctly identify a significant portion of actual cancellations. Sensitivity, or recall, is particularly important in this problem because missing true cancellations could lead to inefficiencies in taxi dispatching and customer dissatisfaction. The Neural Network, despite its high accuracy, had 0% recall for cancellations, meaning it did not detect any actual cancellations. The Random Forest had slightly better sensitivity at 12%, while the Decision Tree performed best in this regard with 18% recall, but all models still demonstrated poor sensitivity overall. This indicates that the models are biased toward the dominant class (non-cancellations).
+5.	What’s the best technique would you choose for this problem and why?
+Based on the results, Random Forest is the best technique for this problem. While the Neural Network achieved the highest overall accuracy (92.9%), it completely failed to detect cancellations (0% recall for class 1), making it unreliable for predicting cancellations. The Decision Tree had better sensitivity (recall) for cancellations (18%), but its accuracy (88.3%) was the lowest among the three models. Random Forest strikes the best balance between accuracy (90.3%) and sensitivity (12%), meaning it is better at generalizing to unseen data while still detecting some cancellations.
+
+While we replaced missing values and engineered features, more preprocessing steps could improve model performance, especially in handling class imbalance and improving sensitivity.
+6.	Data Cleaning:
+•	Outliers
+ 
+ 
+The boxplot analysis of trip length reveals the presence of significant outliers, with one extreme case around 8500 km, which is highly unrealistic for a taxi trip. Most trips are clustered within a reasonable range, but this extreme outlier suggests GPS errors or data entry mistakes. Such outliers can distort machine learning models, leading to misleading predictions and incorrect decision-making. The presence of additional smaller outliers further emphasizes the need for proper data cleaning. To ensure model reliability, it is essential to remove these outliers using the IQR (Interquartile Range) method, which will help maintain a more accurate representation of actual taxi trip distances. The outlier removal process deleted 2,076 records from the dataset.
+ 
+ 
+ 
+Although the IQR method was applied to remove statistical outliers in the trip_length variable, the updated boxplot still reveals a few higher-end values that may appear unusual. However, these remaining values are within a more reasonable range compared to the extreme outliers originally present, such as the 8500 km trip. It's also possible that some longer trips—while rare—are legitimate, especially if the taxi service covers inter-city routes. Therefore, instead of applying a strict cutoff that might eliminate valid data, we accept the cleaned dataset as sufficiently refined for modeling. With the majority of extreme noise removed, the data is now in a suitable state for the next steps: scaling, handling class imbalance, and training more reliable machine learning models.
+Outlier detection and removal were specifically applied to the trip_length variable because it is the most susceptible to extreme and unrealistic values, primarily due to its reliance on GPS coordinates. Minor inaccuracies in latitude and longitude data can result in disproportionately large distance calculations, leading to values that do not reflect actual taxi trip behavior (e.g., trips over 1000 km). These extreme values can significantly distort the learning process of machine learning models, especially those sensitive to feature scales like Neural Networks. In contrast, other features such as booking_created_Hour, travel_type_id, online_booking, and within_city are either categorical, binary, or fall within a naturally limited range and are therefore less prone to outliers. Focusing on trip_length ensures that we address the most impactful source of noise in the dataset without unnecessarily filtering valid records from other stable variables.
+•	Standardizing and Scaling Numerical Features
+We applied scaling and standardization to the numerical variables—specifically trip_length and booking_created_Hour—to ensure that they are on a comparable scale, which is crucial for many machine learning algorithms. These features originally existed on very different scales: trip_length could range from less than a kilometer to several hundred, while booking_created_Hour ranges from 0 to 23. Without scaling, models like Neural Networks and distance-based algorithms (e.g., k-NN, SVM) might disproportionately focus on features with larger numerical ranges, skewing the learning process. By using StandardScaler, we transformed these features to have a mean of 0 and a standard deviation of 1, making the model treat all features equally and improving both convergence and overall performance. Standardization also ensures the model doesn’t become biased toward any single input feature due to its magnitude.
+ 
+ 
+The standardized data output confirms that both trip_length and booking_created_Hour have been successfully transformed using StandardScaler, ensuring a mean of approximately 0 and a standard deviation of 1. This transformation makes the numerical features more comparable, preventing models from being biased toward larger numerical values. The min and max values indicate that most data points fall within a few standard deviations from the mean, keeping the distribution balanced without distorting relationships. With properly scaled features, we can now proceed to address class imbalance using imbalanced-learn, ensuring our model effectively learns from both cancellations and non-cancellations.
+•	Oversampling cancellations
+ 
+ 
+The dataset was highly imbalanced, meaning there were far more non-canceled trips (Car_Cancellation = 0) than canceled trips (Car_Cancellation = 1), which negatively impacted machine learning models because they tend to favor the majority class (non-cancellations) and perform poorly in predicting cancellations. After oversampling, the dataset is now perfectly balanced, with 7,278 instances for both class 0 (non-canceled trips) and class 1 (canceled trips), which ensures that models learn cancellation patterns more effectively rather than being biased toward the majority class.
+7.	Retrain the Decision Tree, Random Forest, and Neural Network models on the new balanced dataset:
+
+     
+After applying SMOTE (Synthetic Minority Over-sampling Technique) to balance the dataset, we observed significant improvements in the model's ability to predict taxi cancellations. The Decision Tree model achieved an accuracy of 83.3%, while Random Forest performed slightly better at 84.0%. The Neural Network model, however, had a lower accuracy of 74.5%. Comparing these results to the previous imbalanced dataset, where models struggled with detecting cancellations due to a class imbalance, we now see improved recall for class 1 (cancellations). Previously, the Neural Network completely failed to recognize cancellations (recall of 0% for class 1), whereas now it achieves 74% recall. Similarly, Random Forest and Decision Tree models improved their recall to around 83-85%, indicating they can now detect cancellations much more effectively. This confirms that SMOTE successfully addressed the model bias toward non-cancellations, making the predictions more balanced. However, the Neural Network’s overall performance is lower than Decision Trees and Random Forest, suggesting it may require further tuning. The improved recall across all models shows that handling class imbalance was a crucial step in building a more reliable model.
+8.	What’s the best technique would you choose for this problem and why? (After data cleaning)
+
+ 
+After addressing data cleaning and class imbalance, Random Forest remains the best model for predicting taxi cancellations, but for different reasons than before. Initially, Random Forest had the highest accuracy (90.3%) but a poor recall for cancellations (12%), meaning it mostly predicted non-cancellations. After balancing the dataset with SMOTE, its accuracy slightly decreased to 84.0%, but its recall for cancellations improved significantly (84%), making it much better at detecting actual cancellations. Compared to the Neural Network, which initially had the highest accuracy (92.9%) but completely failed at predicting cancellations (0% recall). 
